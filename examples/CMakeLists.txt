@@ -17,9 +17,15 @@ target_include_directories(test_app PRIVATE
     ${SDL2_INCLUDE_DIRS}
 )
 
+# Compiler flags
+target_compile_definitions(test_app PRIVATE
+    LV_CONF_INCLUDE_SIMPLE=1
+)
+
 # Link libraries
 target_link_libraries(test_app PRIVATE
     lvgl
     ${SDL2_LIBRARIES}
     m
+    pthread
 ) 
