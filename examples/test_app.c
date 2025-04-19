@@ -11,6 +11,9 @@ static uint32_t * pixels;
 #define DISP_HOR_RES 800
 #define DISP_VER_RES 480
 
+static lv_point_t mouse_point = {0, 0};
+static bool mouse_pressed = false;
+
 static void btn_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -40,6 +43,14 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_m
     SDL_RenderPresent(renderer);
 
     lv_display_flush_ready(disp);
+}
+
+// Input device read callback
+static void mouse_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
+{
+    data->point.x = mouse_point.x;
+    data->point.y = mouse_point.y;
+    data->state = mouse_pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
 
 static void hal_init(void)
@@ -86,39 +97,34 @@ static void hal_init(void)
 
     // Set the display color format
     lv_display_set_color_format(disp, LV_COLOR_FORMAT_ARGB8888);
+
+    // Initialize the mouse input device
+    lv_indev_t * mouse_indev = lv_indev_create();
+    lv_indev_set_type(mouse_indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(mouse_indev, mouse_read_cb);
 }
 
 static void handle_mouse_events(void)
 {
-    static lv_indev_t * mouse_indev = NULL;
-    static lv_point_t last_point = {0, 0};
-    static bool last_pressed = false;
-
-    if (mouse_indev == NULL) {
-        mouse_indev = lv_indev_create();
-        lv_indev_set_type(mouse_indev, LV_INDEV_TYPE_POINTER);
-    }
-
     SDL_Event event;
-    bool pressed = last_pressed;
-    lv_point_t point = last_point;
-
     while(SDL_PollEvent(&event)) {
         switch(event.type) {
             case SDL_MOUSEBUTTONDOWN:
-                pressed = true;
-                point.x = event.button.x;
-                point.y = event.button.y;
+                mouse_pressed = true;
+                mouse_point.x = event.button.x;
+                mouse_point.y = event.button.y;
                 break;
             case SDL_MOUSEBUTTONUP:
-                pressed = false;
-                point.x = event.button.x;
-                point.y = event.button.y;
+                mouse_pressed = false;
+                mouse_point.x = event.button.x;
+                mouse_point.y = event.button.y;
                 break;
             case SDL_MOUSEMOTION:
-                point.x = event.motion.x;
-                point.y = event.motion.y;
-                pressed = (event.motion.state & SDL_BUTTON_LMASK) != 0;
+                mouse_point.x = event.motion.x;
+                mouse_point.y = event.motion.y;
+                if (event.motion.state & SDL_BUTTON_LMASK) {
+                    mouse_pressed = true;
+                }
                 break;
             case SDL_QUIT:
                 SDL_Quit();
@@ -126,11 +132,6 @@ static void handle_mouse_events(void)
                 break;
         }
     }
-
-    last_point = point;
-    last_pressed = pressed;
-
-    lv_indev_set_data(mouse_indev, &point, pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED);
 }
 
 int main(void)
