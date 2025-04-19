@@ -28,7 +28,9 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_m
     for(y = 0; y < h; y++) {
         for(x = 0; x < w; x++) {
             int idx = y * w + x;
-            pixels[(area->y1 + y) * DISP_HOR_RES + area->x1 + x] = ((lv_color_t*)px_map)[idx].full;
+            lv_color32_t color = lv_color32_from_buf(&px_map[idx * 4]);
+            pixels[(area->y1 + y) * DISP_HOR_RES + area->x1 + x] = 
+                (color.blue << 0) | (color.green << 8) | (color.red << 16) | (color.alpha << 24);
         }
     }
 
@@ -85,26 +87,46 @@ static void hal_init(void)
 
 static void handle_mouse_events(void)
 {
+    static lv_indev_t * indev = NULL;
+    static lv_point_t last_point = {0, 0};
+    static bool last_pressed = false;
+
+    if (indev == NULL) {
+        indev = lv_indev_create();
+        lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+    }
+
     SDL_Event event;
+    bool pressed = false;
+    lv_point_t point = last_point;
+
     while(SDL_PollEvent(&event)) {
         switch(event.type) {
             case SDL_MOUSEBUTTONDOWN:
-            case SDL_MOUSEBUTTONUP:
-            case SDL_MOUSEMOTION: {
-                SDL_Point point = {event.motion.x, event.motion.y};
-                lv_display_t * disp = lv_display_get_default();
-                lv_indev_t * indev = lv_indev_create();
-                lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-                lv_indev_set_group(indev, NULL);
-                lv_indev_state_t state = event.type == SDL_MOUSEBUTTONDOWN ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
-                lv_indev_set_data(indev, &point, state);
+                pressed = true;
+                point.x = event.motion.x;
+                point.y = event.motion.y;
                 break;
-            }
+            case SDL_MOUSEBUTTONUP:
+                pressed = false;
+                point.x = event.motion.x;
+                point.y = event.motion.y;
+                break;
+            case SDL_MOUSEMOTION:
+                point.x = event.motion.x;
+                point.y = event.motion.y;
+                pressed = (event.motion.state & SDL_BUTTON_LMASK) != 0;
+                break;
             case SDL_QUIT:
                 exit(0);
                 break;
         }
     }
+
+    last_point = point;
+    last_pressed = pressed;
+
+    lv_indev_set_data(indev, &point, pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED);
 }
 
 int main(void)
