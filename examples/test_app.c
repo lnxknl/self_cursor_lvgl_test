@@ -28,9 +28,9 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_m
     for(y = 0; y < h; y++) {
         for(x = 0; x < w; x++) {
             int idx = y * w + x;
-            lv_color32_t color = lv_color32_from_buf(&px_map[idx * 4]);
-            pixels[(area->y1 + y) * DISP_HOR_RES + area->x1 + x] = 
-                (color.blue << 0) | (color.green << 8) | (color.red << 16) | (color.alpha << 24);
+            // Assuming 32-bit color format (ARGB8888)
+            uint32_t color = *((uint32_t*)&px_map[idx * 4]);
+            pixels[(area->y1 + y) * DISP_HOR_RES + area->x1 + x] = color;
         }
     }
 
@@ -79,10 +79,13 @@ static void hal_init(void)
     }
 
     // Initialize LVGL display
-    static lv_color_t buf[DISP_HOR_RES * DISP_VER_RES];
+    static uint32_t buf[DISP_HOR_RES * DISP_VER_RES];  // Use 32-bit buffer
     lv_display_t * disp = lv_display_create(DISP_HOR_RES, DISP_VER_RES);
-    lv_display_set_buffers(disp, buf, NULL, DISP_HOR_RES * DISP_VER_RES * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(disp, buf, NULL, DISP_HOR_RES * DISP_VER_RES * 4, LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(disp, flush_cb);
+
+    // Set the display color format
+    lv_display_set_color_format(disp, LV_COLOR_FORMAT_ARGB8888);
 }
 
 static void handle_mouse_events(void)
