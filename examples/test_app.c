@@ -77,10 +77,9 @@ static void hal_init(void)
     }
 
     // Initialize LVGL display
-    static lv_display_buf_t disp_buf;
     static lv_color_t buf[DISP_HOR_RES * DISP_VER_RES];
     lv_display_t * disp = lv_display_create(DISP_HOR_RES, DISP_VER_RES);
-    lv_display_set_buffers(disp, buf, NULL, DISP_HOR_RES * DISP_VER_RES, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(disp, buf, NULL, DISP_HOR_RES * DISP_VER_RES * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(disp, flush_cb);
 }
 
@@ -91,9 +90,16 @@ static void handle_mouse_events(void)
         switch(event.type) {
             case SDL_MOUSEBUTTONDOWN:
             case SDL_MOUSEBUTTONUP:
-            case SDL_MOUSEMOTION:
-                // Handle mouse events here if needed
+            case SDL_MOUSEMOTION: {
+                SDL_Point point = {event.motion.x, event.motion.y};
+                lv_display_t * disp = lv_display_get_default();
+                lv_indev_t * indev = lv_indev_create();
+                lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+                lv_indev_set_group(indev, NULL);
+                lv_indev_state_t state = event.type == SDL_MOUSEBUTTONDOWN ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+                lv_indev_set_data(indev, &point, state);
                 break;
+            }
             case SDL_QUIT:
                 exit(0);
                 break;
