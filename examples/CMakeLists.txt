@@ -7,6 +7,9 @@ find_package(SDL2 REQUIRED)
 # Add LVGL library
 add_subdirectory(${CMAKE_SOURCE_DIR}/.. ${CMAKE_BINARY_DIR}/lvgl)
 
+# Add LVGL drivers
+add_subdirectory(${CMAKE_SOURCE_DIR}/../lv_drivers ${CMAKE_BINARY_DIR}/lv_drivers)
+
 # Add the test application
 add_executable(test_app test_app.c)
 
@@ -14,17 +17,20 @@ add_executable(test_app test_app.c)
 target_include_directories(test_app PRIVATE
     ${CMAKE_SOURCE_DIR}/..
     ${CMAKE_SOURCE_DIR}/../src
+    ${CMAKE_SOURCE_DIR}/../lv_drivers
     ${SDL2_INCLUDE_DIRS}
 )
 
 # Compiler flags
 target_compile_definitions(test_app PRIVATE
     LV_CONF_INCLUDE_SIMPLE=1
+    USE_SDL=1
 )
 
 # Link libraries
 target_link_libraries(test_app PRIVATE
     lvgl
+    lv_drivers
     ${SDL2_LIBRARIES}
     m
     pthread
